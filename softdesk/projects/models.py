@@ -43,8 +43,13 @@ class Issues(models.Model):
     author_user_id = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE
     )
-    assigned_user_id = models.ForeignKey(Contributors, on_delete=models.CASCADE)
+    assigned_user_id = models.ForeignKey(
+        Contributors, on_delete=models.CASCADE, blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Issue : {self.issue.name}"
 
 
 class Comments(models.Model):
@@ -54,3 +59,6 @@ class Comments(models.Model):
     )
     issue_id = models.ForeignKey(Issues, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment : {self.comment.name}"

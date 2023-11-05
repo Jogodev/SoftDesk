@@ -34,10 +34,14 @@ class ProjectViewset(ModelViewSet):
     def update(self, request, pk=None):
         data_copy = request.data.copy()
         queryset = Projects.objects.filter(id=pk)
+        new_contributor = User.objects.filter(id=data_copy["author"])[0]
+        data_copy["author"] = new_contributor.id
         project = get_object_or_404(queryset, pk=pk)
         serializer = ProjectSerializer(instance=project, data=data_copy)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
+        project_instance = Projects.objects.get(id=serializer.data["id"])
+        Contributors.objects.create(user=new_contributor, project=project_instance)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None):
@@ -56,11 +60,11 @@ class ContributorViewset(ModelViewSet):
 
     def create(self, request):
         data_copy = request.data.copy()
-        project_instance = Projects.objects.get(id=ProjectSerializer.data["id"])
         serializer = self.serializer_class(data=data_copy)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        Contributors.objects.create(user=request.user, project=project_instance)
+        project = Projects.objects.get(id=ProjectSerializer.data["id"])
+        Contributors.objects.create(user=request.user, project=project)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None):
@@ -77,9 +81,34 @@ class IssueViewset(ModelViewSet):
         serializer = self.serializer_class(self.queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    def create(self, request):
+        data_copy = request.data.copy()
+        serializer = self.serializer_class(data=data_copy)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        project_id = Projects.objects.get(id=ProjectSerializer.data["id"])
+        assigned_user_id = Contributors.objects.filter(id=project_id)
+        Issues.objects.create(
+            author_user_id=request.user,
+            project=project_id,
+            assigned_user_id=assigned_user_id,
+        )
+        print(project_id)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
+    def update(self, request, pk=None):
+        data_copy = request.data.copy()
+        queryset = Issues.objects.filter(id=pk)
+        issue = get_object_or_404(queryset, pk=pk)
+        serializer = IssueSerializer(instance=issue, data=data_copy)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
 
-
+    def destroy(self, request, pk=None):
+        issue = get_object_or_404(self.queryset, pk=pk)
+        self.perform_destroy(issue)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CommentViewset(ModelViewSet):
@@ -89,3 +118,28 @@ class CommentViewset(ModelViewSet):
     def list(self, request):
         serializer = self.serializer_class(self.queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def create(self, request):
+        data_copy = request.data.copy()
+        serializer = self.serializer_class(data=data_copy)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        issue_id = Comments.objects.get(id=CommentSerializer.data["id"])
+        Comments.objects.create(
+            author_user_id=request.user,
+            issue_id=issue_id,
+        )
+
+    def update(self, request, pk=None):
+        data_copy = request.data.copy()
+        queryset = Comments.objects.filter(id=pk)
+        comment = get_object_or_404(queryset, pk=pk)
+        serializer = CommentSerializer(instance=comment, data=data_copy)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+    def destroy(self, request, pk=None):
+        comment = get_object_or_404(self.queryset, pk=pk)
+        self.perform_destroy(comment)
+        return Response(status=status.HTTP_204_NO_CONTENT)
