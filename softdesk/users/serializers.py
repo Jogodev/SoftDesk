@@ -2,6 +2,8 @@ from rest_framework.serializers import ModelSerializer
 from rest_framework import serializers
 from users.models import User
 from datetime import date
+from django.core.exceptions import ValidationError
+from datetime import datetime, date
 
 
 class UserSerializer(ModelSerializer):
@@ -19,6 +21,7 @@ class UserSerializer(ModelSerializer):
 
 
 class RegisterSerializer(ModelSerializer):
+    date_of_birth = serializers.DateField(format="%Y-%m-%d")
     class Meta:
         model = User
         fields = [
@@ -29,19 +32,19 @@ class RegisterSerializer(ModelSerializer):
             "can_be_contacted",
             "can_data_be_shared",
         ]
-
-    def age_validate(self, attrs):
-        print("age_validate")
-        date_of_birth = attrs["date_of_birth"]
+    def validate_date_of_birth(self, date_of_birth):
+        print("validate_date_of_birth")
         today = date.today()
+        print(date_of_birth)
+        date_of_birth = datetime.strptime(str(date_of_birth), "%Y-%m-%d")
         age = (
             today.year
             - date_of_birth.year
             - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
         )
         print("age", age)
-        print("dob", date_of_birth)
-        # if age < 15:
-        #     raise serializers.ValidationError(
-        #         "Vous devez avoir au moins 15 ans pour vous inscrire"
-        #     )
+        if age < 15:
+            raise serializers.ValidationError(
+                f"Vous devez avoir au moins 15 ans pour vous inscrire vous n'avez que {age} ans"
+            )    
+        return datetime.date(date_of_birth)

@@ -23,10 +23,16 @@ class Projects(models.Model):
     description = models.CharField(max_length=8192)
     type = models.CharField(max_length=100, choices=TYPES)
 
+    def __str__(self):
+        return f"{self.title}"
+
 
 class Contributors(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     project = models.ForeignKey(Projects, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.user}"
 
 
 class Issues(models.Model):
@@ -49,7 +55,7 @@ class Issues(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Issue : {self.issue.name}"
+        return f"{self.title}"
 
 
 class Comments(models.Model):
@@ -61,4 +67,4 @@ class Comments(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Comment : {self.comment.name}"
+        return f"Comment {self.comment.name}"

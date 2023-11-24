@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from projects.models import Projects, Contributors, Issues, Comments
 from projects.serializers import (
     ProjectSerializer,
@@ -15,6 +16,7 @@ from users.models import User
 class ProjectViewset(ModelViewSet):
     serializer_class = ProjectSerializer
     queryset = Projects.objects.all()
+    permission_classes = [IsAuthenticated]
 
     def list(self, request):
         serializer = self.serializer_class(self.queryset, many=True)
@@ -22,12 +24,15 @@ class ProjectViewset(ModelViewSet):
 
     def create(self, request):
         data_copy = request.data.copy()
+        author = request.user
         new_contributor = User.objects.filter(id=data_copy["author"])[0]
         data_copy["author"] = new_contributor.id
         serializer = ProjectSerializer(data=data_copy)
+        print(serializer)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         project_instance = Projects.objects.get(id=serializer.data["id"])
+        Projects.objects.create(author=request.user,)
         Contributors.objects.create(user=new_contributor, project=project_instance)
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
@@ -53,6 +58,7 @@ class ProjectViewset(ModelViewSet):
 class ContributorViewset(ModelViewSet):
     serializer_class = ContributorSerializer
     queryset = Contributors.objects.all()
+    permission_classes = [IsAuthenticated]
 
     def list(self, request):
         serializer = self.serializer_class(self.queryset, many=True)
@@ -63,8 +69,9 @@ class ContributorViewset(ModelViewSet):
         serializer = self.serializer_class(data=data_copy)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        project = Projects.objects.get(id=ProjectSerializer.data["id"])
-        Contributors.objects.create(user=request.user, project=project)
+        project = Projects.objects.get(id=data_copy["project"])
+        user = User.objects.get(id=data_copy["user"])
+        Contributors.objects.create(user=user, project=project)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None):
@@ -76,6 +83,7 @@ class ContributorViewset(ModelViewSet):
 class IssueViewset(ModelViewSet):
     serializer_class = IssueSerializer
     queryset = Issues.objects.all()
+    permission_classes = [IsAuthenticated]
 
     def list(self, request):
         serializer = self.serializer_class(self.queryset, many=True)
@@ -93,7 +101,6 @@ class IssueViewset(ModelViewSet):
             project=project_id,
             assigned_user_id=assigned_user_id,
         )
-        print(project_id)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def update(self, request, pk=None):
@@ -114,6 +121,7 @@ class IssueViewset(ModelViewSet):
 class CommentViewset(ModelViewSet):
     serializer_class = CommentSerializer
     queryset = Comments.objects.all()
+    permission_classes = [IsAuthenticated]
 
     def list(self, request):
         serializer = self.serializer_class(self.queryset, many=True)
@@ -124,7 +132,7 @@ class CommentViewset(ModelViewSet):
         serializer = self.serializer_class(data=data_copy)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        issue_id = Comments.objects.get(id=CommentSerializer.data["id"])
+        issue_id = Issues.objects.get(id=IssueSerializer.data["id"])
         Comments.objects.create(
             author_user_id=request.user,
             issue_id=issue_id,
