@@ -17,30 +17,64 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from projects.views import (
-    ProjectViewset,
-    ContributorViewset,
-    CommentViewset,
-    IssueViewset,
+    ProjectViewSet,
+    ContributorViewSet,
+    CommentViewSet,
+    IssueViewSet,
 )
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import DefaultRouter, SimpleRouter
+from rest_framework_nested import routers
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from users.views import UserViewset, RegisterViewSet
+from users.views import UserViewSet, RegisterViewSet
 
-router = DefaultRouter()
-router.register("user", UserViewset, basename="user")
-router.register("project", ProjectViewset, basename="project")
-router.register("contributor", ContributorViewset, basename="contributor")
-router.register("issue", IssueViewset, basename="issue")
-router.register("comment", CommentViewset, basename="comment")
+router = SimpleRouter()
+router.register("users", UserViewSet, basename="users")
+router.register("projects", ProjectViewSet, basename="projects")
+
+contributors_router = routers.NestedSimpleRouter(router, r'projects', lookup='project')
+contributors_router.register("contributors", ContributorViewSet, basename="contributors")
+
+issues_router = routers.NestedSimpleRouter(router, r'projects', lookup='project')
+issues_router.register("issues", IssueViewSet, basename="issues")
+
+comments_router = routers.NestedSimpleRouter(issues_router, r'issues', lookup='issue')
+comments_router.register("comments", CommentViewSet, basename="comments")
+
+
+# router = DefaultRouter()
+# router.register("users", UserViewSet, basename="users")
+# router.register(r"projects", ProjectViewSet, basename="projects")
+# # /projects/
+# # /projects/{pk}/
+
+# projects_router = routers.NestedSimpleRouter(router, r'projects', lookup='project')
+# projects_router.register("users", ContributorViewSet, basename="users")
+# # /projects/{pk}/contributors/
+# # /projects/{pk}/contributors/{pk}/
+
+# projects_router = routers.NestedSimpleRouter(router, r'projects', lookup='projects')
+# projects_router.register("issues", IssueViewSet, basename="issues")
+# # /projects/{pk}/issues/
+# # /projects/{pk}/issues/{pk}/
+
+# issue_router = routers.NestedSimpleRouter(projects_router, r'issues', lookup='issues')
+# issue_router.register("comments", CommentViewSet, basename="comments")
+# # /projects/{pk}/issue/{pk}/comments/
+# # /projects/{pk}/issue/{pk}/comments/{pk}/
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api-auth/", include("rest_framework.urls")),
-    path("api/", include(router.urls)),
-    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("signup/", RegisterViewSet.as_view({"post": "create"}))
+    path("", include(router.urls)),
+    path("", include(contributors_router.urls)),
+    path("", include(issues_router.urls)),
+    path("", include(comments_router.urls)),
+    path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("signup/", RegisterViewSet.as_view({"post": "create"})),
+    path("projects/<int:pk>/subscription/", ProjectViewSet.as_view({"post": "project_subscription"})),
+    path("api/project/issue/<int:pk>/subscription/", ProjectViewSet.as_view({"post": "project_subscription"})),
 ]

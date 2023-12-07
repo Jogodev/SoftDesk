@@ -6,10 +6,10 @@ from users.serializers import UserSerializer, RegisterSerializer
 from rest_framework.permissions import IsAuthenticated
 
 
-class UserViewset(ModelViewSet):
+class UserViewSet(ModelViewSet):
     serializer_class = UserSerializer
     queryset = User.objects.all()
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
 
 class RegisterViewSet(ModelViewSet):
