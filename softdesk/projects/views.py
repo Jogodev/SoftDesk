@@ -1,7 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import APIException
-from projects.permissions import IsAuthor, IsContributor
+from projects.permissions import IsAuthor, IsContributor, IsIssueAuthor, IsCommentAuthor
 from projects.models import Projects, Contributors, Issues, Comments
 from users.models import User
 from projects.serializers import (
@@ -12,14 +11,22 @@ from projects.serializers import (
 )
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from users.models import User
 
 
 class ProjectViewSet(ModelViewSet):
-    serializer_class = ProjectSerializer
     queryset = Projects.objects.all()
-    permission_classes = [IsAuthenticated]
+    serializer_class = ProjectSerializer
+
+    def get_permissions(self):
+        """Return the list of permissions that this view requires."""
+        if self.action == "update" or self.action == "destroy":
+            permission_classes = [IsAuthor]
+            return [permission() for permission in permission_classes]
+        else:
+            permission_classes = [IsAuthenticated]
+            return [permission() for permission in permission_classes]
 
     def list(self, request):
         serializer = self.serializer_class(self.queryset, many=True)
@@ -28,7 +35,7 @@ class ProjectViewSet(ModelViewSet):
     def create(self, request):
         data_copy = request.data.copy()
         new_contributor = request.user.id
-        data_copy['author'] = new_contributor 
+        data_copy["author"] = new_contributor
         serializer = ProjectSerializer(data=data_copy)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -40,8 +47,8 @@ class ProjectViewSet(ModelViewSet):
     def update(self, request, pk=None):
         data_copy = request.data.copy()
         new_contributor = request.user.id
-        data_copy['author'] = new_contributor 
-        queryset = Projects.objects.filter(id=pk)      
+        data_copy["author"] = new_contributor
+        queryset = Projects.objects.filter(id=pk)
         project = get_object_or_404(queryset, pk=pk)
         serializer = ProjectSerializer(instance=project, data=data_copy)
         serializer.is_valid(raise_exception=True)
@@ -58,7 +65,10 @@ class ProjectViewSet(ModelViewSet):
     def project_subscription(self, request, pk=None):
         project = get_object_or_404(self.queryset, pk=pk)
         if Contributors.objects.filter(user=request.user, project=project):
-            print("You already contribute to this project")
+            return Response(
+                "You already contribute to this project",
+                status=status.HTTP_418_IM_A_TEAPOT,
+            )
         else:
             Contributors.objects.create(user=request.user, project=project)
         return Response(status=status.HTTP_200_OK)
@@ -67,10 +77,20 @@ class ProjectViewSet(ModelViewSet):
 class ContributorViewSet(ModelViewSet):
     serializer_class = ContributorSerializer
     queryset = Contributors.objects.all()
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return the list of permissions that this view requires."""
+        if self.action == "update" or self.action == "destroy":
+            permission_classes = [IsContributor]
+            return [permission() for permission in permission_classes]
+        else:
+            permission_classes = [IsAuthenticated]
+            return [permission() for permission in permission_classes]
 
     def list(self, request, project_pk=None):
-        serializer = self.serializer_class(self.queryset.filter(project=self.kwargs['project_pk']), many=True)
+        serializer = self.serializer_class(
+            self.queryset.filter(project=self.kwargs["project_pk"]), many=True
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request, project_pk=None):
@@ -92,7 +112,15 @@ class ContributorViewSet(ModelViewSet):
 class IssueViewSet(ModelViewSet):
     serializer_class = IssueSerializer
     queryset = Issues.objects.all()
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return the list of permissions that this view requires."""
+        if self.action == "update" or self.action == "destroy":
+            permission_classes = [IsIssueAuthor]
+            return [permission() for permission in permission_classes]
+        else:
+            permission_classes = [IsAuthenticated]
+            return [permission() for permission in permission_classes]
 
     def list(self, request, project_pk=None):
         serializer = self.serializer_class(self.queryset, many=True)
@@ -101,8 +129,8 @@ class IssueViewSet(ModelViewSet):
     def create(self, request, project_pk=None):
         data_copy = request.data.copy()
         project = Projects.objects.get(id=project_pk)
-        data_copy['project'] = project_pk
-        data_copy['author_user_id'] = project.author.id
+        data_copy["project"] = project_pk
+        data_copy["author_user_id"] = project.author.id
         serializer = self.serializer_class(data=data_copy)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -111,9 +139,9 @@ class IssueViewSet(ModelViewSet):
     def update(self, request, pk=None, project_pk=None):
         data_copy = request.data.copy()
         project = Projects.objects.get(id=project_pk)
-        data_copy['project'] = project_pk
-        data_copy['author_user_id'] = project.author.id
-        queryset = Issues.objects.filter(id=pk)        
+        data_copy["project"] = project_pk
+        data_copy["author_user_id"] = project.author.id
+        queryset = Issues.objects.filter(id=pk)
         issue = get_object_or_404(queryset, pk=pk)
         serializer = IssueSerializer(instance=issue, data=data_copy)
         serializer.is_valid(raise_exception=True)
@@ -129,7 +157,15 @@ class IssueViewSet(ModelViewSet):
 class CommentViewSet(ModelViewSet):
     serializer_class = CommentSerializer
     queryset = Comments.objects.all()
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return the list of permissions that this view requires."""
+        if self.action == "update" or self.action == "destroy":
+            permission_classes = [IsCommentAuthor]
+            return [permission() for permission in permission_classes]
+        else:
+            permission_classes = [IsAuthenticated]
+            return [permission() for permission in permission_classes]
 
     def list(self, request, project_pk=None, issue_pk=None):
         serializer = self.serializer_class(self.queryset, many=True)
@@ -139,8 +175,8 @@ class CommentViewSet(ModelViewSet):
         data_copy = request.data.copy()
         project = Projects.objects.get(pk=project_pk)
         issue = Issues.objects.get(pk=issue_pk)
-        data_copy['author_user_id'] = project.author.id
-        data_copy['issue_id'] = issue.id
+        data_copy["author_user_id"] = project.author.id
+        data_copy["issue_id"] = issue.id
         serializer = self.serializer_class(data=data_copy)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -150,8 +186,8 @@ class CommentViewSet(ModelViewSet):
         data_copy = request.data.copy()
         project = Projects.objects.get(pk=project_pk)
         issue = Issues.objects.get(pk=issue_pk)
-        data_copy['author_user_id'] = project.author.id
-        data_copy['issue_id'] = issue.id
+        data_copy["author_user_id"] = project.author.id
+        data_copy["issue_id"] = issue.id
         queryset = Comments.objects.filter(id=pk)
         comment = get_object_or_404(queryset, pk=pk)
         serializer = CommentSerializer(instance=comment, data=data_copy)
