@@ -34,13 +34,15 @@ router = SimpleRouter()
 router.register("users", UserViewSet, basename="users")
 router.register("projects", ProjectViewSet, basename="projects")
 
-contributors_router = routers.NestedSimpleRouter(router, r'projects', lookup='project')
-contributors_router.register("contributors", ContributorViewSet, basename="contributors")
+contributors_router = routers.NestedSimpleRouter(router, r"projects", lookup="project")
+contributors_router.register(
+    "contributors", ContributorViewSet, basename="contributors"
+)
 
-issues_router = routers.NestedSimpleRouter(router, r'projects', lookup='project')
+issues_router = routers.NestedSimpleRouter(router, r"projects", lookup="project")
 issues_router.register("issues", IssueViewSet, basename="issues")
 
-comments_router = routers.NestedSimpleRouter(issues_router, r'issues', lookup='issue')
+comments_router = routers.NestedSimpleRouter(issues_router, r"issues", lookup="issue")
 comments_router.register("comments", CommentViewSet, basename="comments")
 
 urlpatterns = [
@@ -50,9 +52,15 @@ urlpatterns = [
     path("", include(contributors_router.urls)),
     path("", include(issues_router.urls)),
     path("", include(comments_router.urls)),
-    path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("login/", TokenObtainPairView.as_view(), name="login"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("signup/", RegisterViewSet.as_view({"post": "create"})),
-    path("projects/<int:pk>/subscription/", ProjectViewSet.as_view({"post": "project_subscription"})),
-    path("api/project/issue/<int:pk>/subscription/", ProjectViewSet.as_view({"post": "project_subscription"})),
+    path("signup/", RegisterViewSet.as_view({"post": "create"}), name="signup"),
+    path(
+        "projects/<int:pk>/subscription/",
+        ProjectViewSet.as_view({"post": "project_subscription"}),
+    ),
+    path(
+        "users/<int:pk>/delete_all_data/",
+        UserViewSet.as_view({"delete": "delete_all_data"}),
+    ),
 ]

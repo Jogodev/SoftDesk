@@ -1,6 +1,11 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
-from projects.permissions import IsAuthor, IsContributor, IsIssueAuthor, IsCommentAuthor
+from projects.permissions import (
+    IsProjectAuthor,
+    IsContributor,
+    IsIssueAuthor,
+    IsCommentAuthor,
+)
 from projects.models import Projects, Contributors, Issues, Comments
 from users.models import User
 from projects.serializers import (
@@ -11,7 +16,7 @@ from projects.serializers import (
 )
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from rest_framework.viewsets import ModelViewSet
 from users.models import User
 
 
@@ -22,7 +27,7 @@ class ProjectViewSet(ModelViewSet):
     def get_permissions(self):
         """Return the list of permissions that this view requires."""
         if self.action == "update" or self.action == "destroy":
-            permission_classes = [IsAuthor]
+            permission_classes = [IsProjectAuthor]
             return [permission() for permission in permission_classes]
         else:
             permission_classes = [IsAuthenticated]
@@ -66,7 +71,7 @@ class ProjectViewSet(ModelViewSet):
         project = get_object_or_404(self.queryset, pk=pk)
         if Contributors.objects.filter(user=request.user, project=project):
             return Response(
-                "You already contribute to this project",
+                {"message": "You already contribute to this project"},
                 status=status.HTTP_418_IM_A_TEAPOT,
             )
         else:
@@ -81,7 +86,7 @@ class ContributorViewSet(ModelViewSet):
     def get_permissions(self):
         """Return the list of permissions that this view requires."""
         if self.action == "update" or self.action == "destroy":
-            permission_classes = [IsContributor]
+            permission_classes = [IsProjectAuthor, IsAuthenticated]
             return [permission() for permission in permission_classes]
         else:
             permission_classes = [IsAuthenticated]
@@ -103,8 +108,8 @@ class ContributorViewSet(ModelViewSet):
         Contributors.objects.create(user=user, project=project)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def destroy(self, request, pk=None):
-        contributor = get_object_or_404(self.queryset, pk=pk)
+    def destroy(self, request, pk=None, project_pk=None):
+        contributor = get_object_or_404(self.queryset, pk=pk, project=project_pk)
         self.perform_destroy(contributor)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -116,7 +121,7 @@ class IssueViewSet(ModelViewSet):
     def get_permissions(self):
         """Return the list of permissions that this view requires."""
         if self.action == "update" or self.action == "destroy":
-            permission_classes = [IsIssueAuthor]
+            permission_classes = [IsIssueAuthor, IsAuthenticated]
             return [permission() for permission in permission_classes]
         else:
             permission_classes = [IsAuthenticated]
@@ -130,7 +135,7 @@ class IssueViewSet(ModelViewSet):
         data_copy = request.data.copy()
         project = Projects.objects.get(id=project_pk)
         data_copy["project"] = project_pk
-        data_copy["author_user_id"] = project.author.id
+        data_copy["author_user_id"] = request.user.id
         serializer = self.serializer_class(data=data_copy)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -149,7 +154,7 @@ class IssueViewSet(ModelViewSet):
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None, project_pk=None):
-        issue = get_object_or_404(self.queryset, pk=pk)
+        issue = get_object_or_404(self.queryset, pk=pk, project=project_pk)
         self.perform_destroy(issue)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -175,7 +180,7 @@ class CommentViewSet(ModelViewSet):
         data_copy = request.data.copy()
         project = Projects.objects.get(pk=project_pk)
         issue = Issues.objects.get(pk=issue_pk)
-        data_copy["author_user_id"] = project.author.id
+        data_copy["author_user_id"] = request.user.id
         data_copy["issue_id"] = issue.id
         serializer = self.serializer_class(data=data_copy)
         serializer.is_valid(raise_exception=True)
