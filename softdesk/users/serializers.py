@@ -44,6 +44,6 @@ class RegisterSerializer(ModelSerializer):
         )
         if age < 15:
             raise serializers.ValidationError(
-                f"Vous devez avoir au moins 15 ans pour vous inscrire vous n'avez que {age} ans"
+                f"You must be at least 15 years old to register you only have {age} years"
             )
         return datetime.date(date_of_birth)

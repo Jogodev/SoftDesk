@@ -18,8 +18,9 @@ class IsProjectAuthor(BasePermission):
 class IsContributor(BasePermission):
     def has_permission(self, request, view):
         project = Projects.objects.get(id=view.kwargs["project_pk"])
-        contributor = Contributors.objects.get(project=project, id=view.kwargs["pk"])
-        return bool(request.user == contributor.user)
+        contributors = Contributors.objects.filter(project=project)
+        contributor_ids = [contributor.user.id for contributor in contributors]
+        return bool(request.user.id in contributor_ids)
 
 
 class IsIssueAuthor(BasePermission):

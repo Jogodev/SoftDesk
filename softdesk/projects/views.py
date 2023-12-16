@@ -89,7 +89,7 @@ class ContributorViewSet(ModelViewSet):
             permission_classes = [IsProjectAuthor, IsAuthenticated]
             return [permission() for permission in permission_classes]
         else:
-            permission_classes = [IsAuthenticated]
+            permission_classes = [IsAuthenticated, IsContributor]
             return [permission() for permission in permission_classes]
 
     def list(self, request, project_pk=None):
@@ -124,7 +124,7 @@ class IssueViewSet(ModelViewSet):
             permission_classes = [IsIssueAuthor, IsAuthenticated]
             return [permission() for permission in permission_classes]
         else:
-            permission_classes = [IsAuthenticated]
+            permission_classes = [IsAuthenticated,  IsContributor]
             return [permission() for permission in permission_classes]
 
     def list(self, request, project_pk=None):
@@ -133,7 +133,6 @@ class IssueViewSet(ModelViewSet):
 
     def create(self, request, project_pk=None):
         data_copy = request.data.copy()
-        project = Projects.objects.get(id=project_pk)
         data_copy["project"] = project_pk
         data_copy["author_user_id"] = request.user.id
         serializer = self.serializer_class(data=data_copy)
@@ -143,9 +142,8 @@ class IssueViewSet(ModelViewSet):
 
     def update(self, request, pk=None, project_pk=None):
         data_copy = request.data.copy()
-        project = Projects.objects.get(id=project_pk)
         data_copy["project"] = project_pk
-        data_copy["author_user_id"] = project.author.id
+        data_copy["author_user_id"] = request.user.id
         queryset = Issues.objects.filter(id=pk)
         issue = get_object_or_404(queryset, pk=pk)
         serializer = IssueSerializer(instance=issue, data=data_copy)
@@ -166,10 +164,10 @@ class CommentViewSet(ModelViewSet):
     def get_permissions(self):
         """Return the list of permissions that this view requires."""
         if self.action == "update" or self.action == "destroy":
-            permission_classes = [IsCommentAuthor]
+            permission_classes = [IsCommentAuthor, IsAuthenticated]
             return [permission() for permission in permission_classes]
         else:
-            permission_classes = [IsAuthenticated]
+            permission_classes = [IsAuthenticated, IsContributor]
             return [permission() for permission in permission_classes]
 
     def list(self, request, project_pk=None, issue_pk=None):
@@ -178,7 +176,6 @@ class CommentViewSet(ModelViewSet):
 
     def create(self, request, project_pk=None, issue_pk=None):
         data_copy = request.data.copy()
-        project = Projects.objects.get(pk=project_pk)
         issue = Issues.objects.get(pk=issue_pk)
         data_copy["author_user_id"] = request.user.id
         data_copy["issue_id"] = issue.id
@@ -189,9 +186,8 @@ class CommentViewSet(ModelViewSet):
 
     def update(self, request, pk=None, project_pk=None, issue_pk=None):
         data_copy = request.data.copy()
-        project = Projects.objects.get(pk=project_pk)
         issue = Issues.objects.get(pk=issue_pk)
-        data_copy["author_user_id"] = project.author.id
+        data_copy["author_user_id"] = request.user.id
         data_copy["issue_id"] = issue.id
         queryset = Comments.objects.filter(id=pk)
         comment = get_object_or_404(queryset, pk=pk)

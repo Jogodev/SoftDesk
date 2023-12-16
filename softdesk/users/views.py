@@ -12,7 +12,6 @@ from django.shortcuts import get_object_or_404
 class UserViewSet(ModelViewSet):
     serializer_class = UserSerializer
     queryset = User.objects.all()
-
     def get_permissions(self):
         if (
             self.action == "update"
