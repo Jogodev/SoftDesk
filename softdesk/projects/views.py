@@ -124,7 +124,7 @@ class IssueViewSet(ModelViewSet):
             permission_classes = [IsIssueAuthor, IsAuthenticated]
             return [permission() for permission in permission_classes]
         else:
-            permission_classes = [IsAuthenticated,  IsContributor]
+            permission_classes = [IsAuthenticated, IsContributor]
             return [permission() for permission in permission_classes]
 
     def list(self, request, project_pk=None):

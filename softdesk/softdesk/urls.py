@@ -22,7 +22,7 @@ from projects.views import (
     CommentViewSet,
     IssueViewSet,
 )
-from rest_framework.routers import DefaultRouter, SimpleRouter
+from rest_framework.routers import SimpleRouter
 from rest_framework_nested import routers
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
