@@ -171,7 +171,9 @@ class CommentViewSet(ModelViewSet):
             return [permission() for permission in permission_classes]
 
     def list(self, request, project_pk=None, issue_pk=None):
-        serializer = self.serializer_class(self.queryset, many=True)
+        serializer = self.serializer_class(
+            self.queryset.filter(issue_id=issue_pk), many=True
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request, project_pk=None, issue_pk=None):

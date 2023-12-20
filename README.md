@@ -4,7 +4,7 @@
 
 ### Développer avec Django REST
 
-Testé avec [postman](https://learning.postman.com/docs/introduction/overview/)
+### Testé avec [postman](https://learning.postman.com/docs/introduction/overview/)
 
 ## Cloner le projet
 
@@ -76,4 +76,4 @@ $ python manage.py migrate
 
 ### Documentation
 
-Toutes la documentation sur les différents endpoints est disponible sur [API DRF](https://documenter.getpostman.com/view/17405214/2s9Ykoc1Q9)
+La documentation sur les différents endpoints est disponible sur [API DRF](https://documenter.getpostman.com/view/17405214/2s9Ykoc1Q9)
