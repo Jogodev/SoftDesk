@@ -16,6 +16,6 @@ pyflakes==3.1.0
 pyjwt==2.8.0
 pytz==2023.3.post1
 requests==2.31.0
-sqlparse==0.4.4
+sqlparse==0.5.0
 tzdata==2023.3
 urllib3==2.1.0
